@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full w-full">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Voice Intelligence | Pro Dashboard</title>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+        "talkinghead": "https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@1.7/modules/talkinghead.mjs"
+      }
+    }
+    </script>
+
+    <style>
+        :root {
+            --bg-main: #030305;
+            --surface-color: rgba(20, 20, 25, 0.6);
+            --accent-blue: #4f46e5;
+            --accent-purple: #9333ea;
+            --glass-border: rgba(255, 255, 255, 0.06);
+            --text-primary: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            background-image:
+                radial-gradient(circle at 15% 50%, rgba(79, 70, 229, 0.08), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(147, 51, 234, 0.08), transparent 25%);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        #overlay-screen {
+            position: fixed;
+            inset: 0;
+            background: rgba(3, 3, 5, 0.95);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glow-effect {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.15), transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .start-btn {
+            padding: 16px 48px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            color: #fff;
+            font-weight: 600;
+            font-size: 1.1rem;
+            border-radius: 100px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            box-shadow: 0 0 30px rgba(147, 51, 234, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .start-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .start-btn:hover::before {
+            left: 100%;
+        }
+
+        .start-btn:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 15px 40px rgba(147, 51, 234, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+        }
+
+        .glass-panel {
+            background: var(--surface-color);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            z-index: 10;
+        }
+
+        .sidebar {
+            width: 300px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            border-right-width: 1px;
+            border-right-style: solid;
+            border-right-color: var(--glass-border);
+        }
+
+        .main-content {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #avatar-container {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: radial-gradient(circle at 50% 50%, rgba(26, 26, 36, 0.4) 0%, transparent 100%);
+        }
+
+        .controls-overlay {
+            position: absolute;
+            bottom: 48px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+            z-index: 20;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .status-badge {
+            padding: 10px 24px;
+            background: rgba(15, 15, 20, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .status-badge::before {
+            content: '';
+            display: block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: currentColor;
+            box-shadow: 0 0 10px currentColor;
+            transition: all 0.3s ease;
+        }
+
+        .transcript-panel {
+            width: 380px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            border-left-width: 1px;
+            border-left-style: solid;
+            border-left-color: var(--glass-border);
+        }
+
+        .chat-bubble {
+            padding: 18px;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 20px;
+            animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+
+        .chat-bubble:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-bubble.ai-msg {
+            background: linear-gradient(145deg, rgba(79, 70, 229, 0.05), rgba(147, 51, 234, 0.05));
+            border: 1px solid rgba(147, 51, 234, 0.15);
+        }
+
+        .tag {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tag-human {
+            color: #94a3b8;
+        }
+
+        .tag-ai {
+            color: #c084fc;
+            text-shadow: 0 0 10px rgba(192, 132, 252, 0.3);
+        }
+
+        @keyframes slideUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-top: 2px solid var(--accent-purple);
+            border-radius: 50%;
+            animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            display: none;
+            box-shadow: 0 0 15px rgba(147, 51, 234, 0.2);
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .mic-btn {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="overlay-screen">
+        <div class="glow-effect"></div>
+        <h1 class="text-5xl font-light mb-10 tracking-tight text-white drop-shadow-2xl text-center leading-tight">
+            Digital <span
+                class="font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-500">Human</span><br />Interface
+        </h1>
+        <div class="start-btn" id="initBtn">Launch Neural Agent</div>
+        <p class="text-[10px] mt-10 text-slate-500 uppercase tracking-[0.5em] font-medium">Secured Neural Connection</p>
+    </div>
+
+    <aside class="sidebar glass-panel">
+        <div class="p-8 flex flex-col h-full">
+            <div class="flex items-center gap-4 mb-14">
+                <div
+                    class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m8 0h-3m3-8.5a3.5 3.5 0 11-7 0 3.5 3.5 0 017 0z">
+                        </path>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold tracking-wide text-white">Riverborn <span
+                            class="text-indigo-400">AI</span></h2>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Voice Dashboard</p>
+                </div>
+            </div>
+
+            <div class="space-y-6 flex-1">
+                <div
+                    class="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-colors">
+                    <h3 class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-4">Core Capabilities
+                    </h3>
+                    <ul class="text-sm text-slate-300 space-y-4">
+                        <li class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]">
+                            </div>
+                            <span class="font-medium tracking-wide">Real-time Lip Sync</span>
+                        </li>
+                        <li class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.5)]">
+                            </div>
+                            <span class="font-medium tracking-wide">Neural TTS Engine</span>
+                        </li>
+                        <li class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(192,132,252,0.5)]">
+                            </div>
+                            <span class="font-medium tracking-wide">Human-like Nuances</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.05]">
+                    <h3 class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-2">System Status</h3>
+                    <div class="flex items-center gap-2 text-sm text-slate-300">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7">
+                            </path>
+                        </svg>
+                        All systems operational
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-auto pt-6 border-t border-white/[0.05]">
+                <p class="text-[10px] text-slate-500 uppercase tracking-widest text-center">v1.0.0</p>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div id="avatar-container"></div>
+
+        <div class="controls-overlay">
+            <div class="flex items-center gap-4">
+                <div id="statusBadge" class="status-badge">Standby</div>
+            </div>
+            <div id="loading" class="loading-spinner"></div>
+
+            <div class="flex items-center gap-6">
+                <div id="micBtn" class="mic-btn">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m8 0h-3m3-8.5a3.5 3.5 0 11-7 0 3.5 3.5 0 017 0z">
+                        </path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <section class="transcript-panel glass-panel">
+        <div class="p-6 border-b border-white/[0.05] flex justify-between items-center bg-white/[0.01]">
+            <span class="font-bold uppercase text-[10px] tracking-[0.2em] text-slate-400">Live Transcript</span>
+            <div class="flex gap-1">
+                <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
+                <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
+                <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
+            </div>
+        </div>
+        <div id="logs" class="flex-1 overflow-y-auto p-6 scroll-smooth"></div>
+    </section>
+
+    <script type="module">
+        import { TalkingHead } from "talkinghead";
+        import { blendShapeNames } from "/static/blendshapes.js";
+
+        const micBtn = document.getElementById('micBtn');
+        const statusBadge = document.getElementById('statusBadge');
+        const loading = document.getElementById('loading');
+        const logsContainer = document.getElementById('logs');
+        const initBtn = document.getElementById('initBtn');
+        const overlay = document.getElementById('overlay-screen');
+
+        let head;
+        let mediaRecorder, audioChunks = [], isRecording = false;
+        let audioCtx;
+
+        initBtn.onclick = async () => {
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.style.display = 'none', 500);
+
+            // Initialize AudioContext on user gesture
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
+
+            await initAvatar();
+
+            // Automatically start continuous listening after initialization
+            startContinuousListening();
+        };
+
+        async function initAvatar() {
+            const node = document.getElementById('avatar-container');
+
+            try {
+                head = new TalkingHead(node, {
+                    modelRoot: "Armature", // Standard for the downloaded brunette model
+                    cameraView: "upper",
+                    cameraDistance: 1.0,
+                    cameraY: 0.4,
+                    lipsyncModules: ["en"],
+                    avatarSpeakingHeadMove: 0.5,
+                    avatarIdleHeadMove: 0.2,
+                    audioCtx: audioCtx,
+                    ttsVolume: 1.0,      // Ensure volume is up
+                    mixerGainSpeech: 1.0 // Ensure speech gain is up
+                });
+
+                statusBadge.innerText = "Initializing Local Agent...";
+
+                // Using the local fixed model to avoid DNS/Network issues
+                await head.showAvatar({
+                    url: "/static/avatar_fixed.glb",
+                    body: "F",
+                    lipsyncLang: "en"
+                }, (ev) => {
+                    if (ev.lengthComputable) {
+                        const p = Math.round((ev.loaded / ev.total) * 100);
+                        statusBadge.innerText = `Loading: ${p}%`;
+                    }
+                });
+
+                // Removed manual teeth scaling/positioning as it breaks bone rigging and causes floating teeth
+
+                statusBadge.innerText = "System Ready";
+            } catch (err) {
+                console.error("Avatar Load Error:", err);
+                statusBadge.innerText = "Critical Load Error";
+                alert("Avatar Load Error: " + err.message + "\nPlease ensure the file static/avatar_fixed.glb exists.");
+            }
+        }
+
+        // Voice Recording Logic
+        micBtn.style.display = 'none'; // Hide the mic button as we use auto-listening now
+        let isAvatarSpeaking = false;
+
+        async function startContinuousListening() {
+            if (isAvatarSpeaking) return;
+
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: { echoCancellation: true, noiseSuppression: true }
+                });
+
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                mediaRecorder.onstop = () => {
+                    processAudio();
+                    stream.getTracks().forEach(track => track.stop()); // free mic
+                };
+
+                const source = audioCtx.createMediaStreamSource(stream);
+                const analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 512;
+                analyser.minDecibels = -60;
+                source.connect(analyser);
+
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                let speaking = false;
+                let silenceStart = null;
+                const SILENCE_DELAY = 800; // Stop recording after 0.8 seconds of silence
+
+                function detectSilence() {
+                    if (!isRecording) return;
+
+                    analyser.getByteFrequencyData(dataArray);
+                    let sum = 0;
+                    for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+                    let avg = sum / dataArray.length;
+
+                    if (avg > 3) { // Lowered threshold to easily detect speech
+                        speaking = true;
+                        silenceStart = null;
+                        statusBadge.innerText = "Listening (Speech detected)...";
+                        statusBadge.style.color = "#10b981"; // green
+                    } else {
+                        if (speaking) {
+                            if (!silenceStart) silenceStart = performance.now();
+                            if (performance.now() - silenceStart > SILENCE_DELAY) {
+                                stopContinuousListening();
+                                return;
+                            }
+                        } else {
+                            statusBadge.innerText = "Listening (Waiting for speech)...";
+                            statusBadge.style.color = "#ef4444"; // red
+                        }
+                    }
+                    requestAnimationFrame(detectSilence);
+                }
+
+                mediaRecorder.start();
+                isRecording = true;
+                detectSilence();
+
+            } catch (err) {
+                console.error("Microphone access denied.", err);
+                statusBadge.innerText = "Mic Error";
+            }
+        }
+
+        function stopContinuousListening() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            isRecording = false;
+            statusBadge.innerText = "Processing...";
+            statusBadge.style.color = "#94a3b8";
+            loading.style.display = "block";
+        }
+
+        async function processAudio() {
+            const formData = new FormData();
+            formData.append('audio', new Blob(audioChunks, { type: 'audio/wav' }));
+
+            try {
+                const response = await fetch('/process-voice', { method: 'POST', body: formData });
+                const data = await response.json();
+                loading.style.display = "none";
+
+                if (data.error) {
+                    addLog('System', data.error);
+                    statusBadge.innerText = "Ready";
+                    startContinuousListening(); // Restart listening on error
+                    return;
+                }
+
+                addLog('You', data.user_text);
+                addLog('AI', data.ai_text);
+
+                // Play audio with TalkingHead lip-sync
+                if (data.audio_base64) {
+                    await speakResponse(data.audio_base64, data.ai_text, data.visemes);
+                } else {
+                    console.error("No audio data received from server");
+                    statusBadge.innerText = "Ready (No Audio)";
+                    startContinuousListening(); // Restart listening if no audio to play
+                }
+
+            } catch (err) {
+                console.error(err);
+                loading.style.display = "none";
+                statusBadge.innerText = "Error";
+                startContinuousListening(); // Restart listening on error
+            }
+        }
+
+
+
+        async function speakResponse(base64, text, visemes = []) {
+            try {
+                statusBadge.innerText = "Speaking...";
+                statusBadge.style.color = "#6366f1";
+
+                const audio = new Audio("data:audio/mpeg;base64," + base64);
+                audio.crossOrigin = "anonymous";
+                audio.volume = 1.0;
+
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+                const source = audioCtx.createMediaElementSource(audio);
+                const analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 128;
+                source.connect(analyser);
+                analyser.connect(audioCtx.destination);
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+                const morphMeshes = [];
+                function findMorphs(node) {
+                    if (node.morphTargetDictionary && node.morphTargetInfluences) {
+                        // Include all meshes with morph targets to be safe
+                        morphMeshes.push(node);
+                    }
+                    if (node.children) node.children.forEach(findMorphs);
+                }
+                findMorphs(head.scene);
+                if (head.group) findMorphs(head.group);
+                console.log(`Found ${morphMeshes.length} morph meshes for lip-sync`);
+
+                const meshMappings = morphMeshes.map(mesh => {
+                    const mapping = {};
+                    const meshKeys = Object.keys(mesh.morphTargetDictionary);
+                    blendShapeNames.forEach((azureName, azureIdx) => {
+                        const targetKey = meshKeys.find(k => k.toLowerCase() === azureName.toLowerCase() || k.toLowerCase().includes(azureName.toLowerCase()));
+                        if (targetKey) mapping[azureIdx] = mesh.morphTargetDictionary[targetKey];
+                    });
+                    return { mesh, mapping };
+                });
+
+                let lastVisemeIdx = 0;
+                console.log(`Starting playback with ${visemes.length} visemes`);
+
+                isAvatarSpeaking = true;
+                audio.play().then(() => {
+                    function animate() {
+                        // If audio has ended or been stopped, clear morphs and exit
+                        if (audio.ended || !isAvatarSpeaking) {
+                            morphMeshes.forEach(m => m.morphTargetInfluences.fill(0));
+                            isAvatarSpeaking = false;
+                            setTimeout(() => startContinuousListening(), 500);
+                            return;
+                        }
+
+                        // Small offset (40ms) to account for audio device latency
+                        const elapsed = (audio.currentTime * 1000) - 40;
+
+                        let currentViseme = null;
+                        let nextViseme = null;
+                        let lerpFactor = 0;
+
+                        if (visemes && visemes.length > 0) {
+                            // Find current and next viseme for interpolation
+                            for (let i = lastVisemeIdx; i < visemes.length; i++) {
+                                if (visemes[i].time <= elapsed) {
+                                    currentViseme = visemes[i];
+                                    lastVisemeIdx = i;
+                                } else {
+                                    nextViseme = visemes[i];
+                                    break;
+                                }
+                            }
+
+                            if (currentViseme) {
+                                if (nextViseme) {
+                                    const duration = nextViseme.time - currentViseme.time;
+                                    if (duration > 0) {
+                                        lerpFactor = (elapsed - currentViseme.time) / duration;
+                                    }
+                                }
+
+                                meshMappings.forEach(({ mesh, mapping }) => {
+                                    Object.keys(mapping).forEach(azureIdxStr => {
+                                        const azureIdx = Number(azureIdxStr);
+
+                                        // WHITELIST: Only apply these specific jaw/lip blendshapes.
+                                        // Everything else (smile, stretch, dimple, cheek, brow) is
+                                        // skipped entirely — they combine to create the wide "ha" effect.
+                                        // --- TUNING GUIDE ---
+                                        // Increase jawOpen to open mouth more, decrease to close more.
+                                        // Increase mouthClose to press lips tighter on p/b/m.
+                                        // Funnel/Pucker control O/U shape — keep low to avoid fish-mouth.
+                                        // Upper/Lower lip weights control how much gum shows — keep ≤0.22.
+                                        const WEIGHTS = {
+                                            17: 0.18,  // jawOpen        ← main mouth open (reduced: was 0.28)
+                                            18: 0.70,  // mouthClose     ← lips closing (p,b,m) (increased: was 0.60)
+                                            19: 0.30,  // mouthFunnel    ← O/oo sounds (reduced: was 0.45)
+                                            20: 0.30,  // mouthPucker    ← pursed lips (reduced: was 0.45)
+                                            37: 0.22,  // mouthLowerDownLeft  (reduced: was 0.32)
+                                            38: 0.22,  // mouthLowerDownRight (reduced: was 0.32)
+                                            39: 0.20,  // mouthUpperUpLeft    (reduced: was 0.30)
+                                            40: 0.20,  // mouthUpperUpRight   (reduced: was 0.30)
+                                        };
+
+                                        if (!(azureIdx in WEIGHTS)) return; // skip everything else
+
+                                        const v1 = currentViseme.blendshapes[azureIdx];
+                                        const v2 = nextViseme ? nextViseme.blendshapes[azureIdx] : v1;
+                                        const val = (v1 + (v2 - v1) * Math.max(0, Math.min(1, lerpFactor))) * WEIGHTS[azureIdx];
+
+                                        mesh.morphTargetInfluences[mapping[azureIdx]] = Math.min(1.0, val);
+                                    });
+                                });
+
+                            }
+                        } else {
+                            // Frequency-based fallback if no visemes
+                            analyser.getByteFrequencyData(dataArray);
+                            let sum = 0;
+                            for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+                            const volume = (sum / dataArray.length) / 128;
+                            const jawVal = Math.min(0.35, volume * 0.9); // reduced cap to match smaller mouth
+
+                            meshMappings.forEach(({ mesh, mapping }) => {
+                                if (mapping[17] !== undefined) mesh.morphTargetInfluences[mapping[17]] = jawVal;
+                                if (mapping[19] !== undefined) mesh.morphTargetInfluences[mapping[19]] = jawVal * 0.4;
+                            });
+                        }
+                        requestAnimationFrame(animate);
+                    }
+                    requestAnimationFrame(animate);
+                }).catch(e => {
+                    console.error("Playback error:", e);
+                    isAvatarSpeaking = false;
+                    startContinuousListening();
+                });
+
+                statusBadge.innerText = "Ready";
+                statusBadge.style.color = "#94a3b8";
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // Manual blink interval removed to let TalkingHead library handle natural blinking
+
+        function addLog(sender, text) {
+            const div = document.createElement('div');
+            const isHuman = sender === 'You';
+            div.className = `chat-bubble ${isHuman ? '' : 'ai-msg'}`;
+            const tagClass = isHuman ? 'tag-human' : 'tag-ai';
+            const iconHtml = isHuman
+                ? '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>'
+                : '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>';
+
+            div.innerHTML = `
+                <span class="tag ${tagClass}">
+                    ${iconHtml}
+                    ${isHuman ? 'HUMAN' : 'INTELLIGENCE'}
+                </span>
+                ${text}
+            `;
+            logsContainer.appendChild(div);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+    </script>
+</body>
+
+</html>
